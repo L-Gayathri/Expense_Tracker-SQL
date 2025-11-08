@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img src="download.jpg" alt="Logo" class="logo">
+      <span class="title">Expense Tracker</span>
+    </div>
+  </nav>
+  <button id="logoutBtn" class="logout">Logout</button>
+  <div class="container">
+    <div class="dashboard">
+      <h2>Your Salary: <span id="salary"></span></h2>
+      <h2>Total Spent: <span id="spent"></span></h2>
+      <h2>Remaining Balance: <span id="remaining"></span></h2>
+    </div>
+
+    <form id="expenseForm">
+      <input type="number" id="amount" placeholder="Amount" required />
+      <input type="text" id="description" placeholder="Description" required />
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <h3>Your Expenses:</h3>
+    <ul id="expensesList"></ul>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login.html';
+    }
+
+    async function getBalance() {
+      const response = await fetch('/api/balance', {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      const data = await response.json();
+      document.getElementById('salary').textContent = data.salary;
+      document.getElementById('spent').textContent = data.spent;
+      document.getElementById('remaining').textContent = data.remaining;
+    }
+
+    async function getExpenses() {
+      const response = await fetch('/api/expenses', {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      const expenses = await response.json();
+      const expensesList = document.getElementById('expensesList');
+      expensesList.innerHTML = '';
+
+      expenses.forEach((expense) => {
+        const li = document.createElement('li');
+        const text = document.createElement('span');
+        text.textContent = `${expense.description}: $${expense.amount}`;
+        li.appendChild(text);
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '✏️';
+        editBtn.onclick = async () => {
+          const newDescription = prompt('New Description:', expense.description);
+          const newAmount = prompt('New Amount:', expense.amount);
+          if (newDescription && newAmount) {
+            const response = await fetch('/api/expenses/' + expense.id, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ description: newDescription, amount: newAmount }),
+            });
+
+            if (response.ok) {
+              getBalance();
+              getExpenses();
+            } else {
+              const error = await response.json();
+              alert(error.error || 'Error updating expense');
+            }
+          }
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '❌';
+        delBtn.onclick = async () => {
+          const response = await fetch('/api/expenses/' + expense.id, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (response.ok || response.status === 204) {
+            getBalance();
+            getExpenses();
+          } else {
+            alert('Error deleting expense');
+          }
+        };
+
+        li.appendChild(editBtn);
+        li.appendChild(delBtn);
+        expensesList.appendChild(li);
+      });
+    }
+
+    document.getElementById('expenseForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const amount = document.getElementById('amount').value;
+      const description = document.getElementById('description').value;
+
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount, description }),
+      });
+
+      if (response.ok) {
+        getBalance();
+        getExpenses();
+        document.getElementById('expenseForm').reset();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Error adding expense');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    });
+
+    getBalance();
+    getExpenses();
+  </script>
+</body>
+</html>

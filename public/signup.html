@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="signup.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img src="download.jpg" alt="Logo" class="logo">
+      <span class="title">Expense Tracker</span>
+    </div>
+  </nav>
+  <div class="container">
+    <h1>Sign Up</h1>
+    <form id="signupForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <input type="number" id="salary" placeholder="Monthly Income" required />
+      <button type="submit">Sign Up</button>
+    </form>
+    <p>Already have an account? <a href="/login.html">Log in here</a></p>
+  </div>
+
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const salary = document.getElementById('salary').value;
+
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, salary }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert('User created successfully! Please log in.');
+        window.location.href = '/login.html';
+      } else {
+        alert(data.error);
+      }
+    });
+  </script>
+</body>
+</html>
